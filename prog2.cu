@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <iostream>
 #include <cuda_runtime.h>
 #include <algorithm>
@@ -15,6 +16,9 @@ typedef struct{
 
 float ** generate_set(point a, point b, point c, point *points);
 float get_distance(point a, point b);
+__global__ void trilateration(point *a, point *b, point *c, float ** dv, point * pts);
+
+
 
 int main(int argc, char *argv[]){
     srand(time(NULL));
@@ -28,12 +32,34 @@ int main(int argc, char *argv[]){
     
     float ** distance_vector = generate_set(a,b,c,points);
 
+    float ** dv;
+    point * da;
+    point * db;
+    point * dc;
+    point * pts;
+
+    cudaMalloc(&da, sizeof(point));
+    cudaMalloc(&db, sizeof(point));
+    cudaMalloc(&dc, sizeof(point));
+    cudaMalloc((void **)&pts, (NUM/4) * sizeof(point));
+    cudaMalloc((void **)&dv, NUM*sizeof(float *));
+
+    for(int i = 0; i < NUM; i++){
+    	    cudaMalloc(&dv[i], 3*sizeof(float));
+    }
+
+    cudaMemcpy(dv, distance_vector, NUM * sizeof(float*), cudaMemcpyHostToDevice);
+    cudaMemcpy(da, &a, sizeof(point),cudaMemcpyHostToDevice);
+    cudaMemcpy(db, &b, sizeof(point),cudaMemcpyHostToDevice);
+    cudaMemcpy(dc, &c, sizeof(point),cudaMemcpyHostToDevice);
+
+    trilateration<<<1,1>>>(da,db,dc,dv,pts);
+    
     return 0;    
 }
 
 float ** generate_set(point a, point b, point c, point *points){
 
-    
     float ** dist = (float **) malloc(NUM * sizeof(float *)); 
     int i,j;
     for(j = 0; j < NUM; j++){
@@ -70,9 +96,9 @@ float ** generate_set(point a, point b, point c, point *points){
 
 	  //get new point
 	  float temp = (rand() % 20000);
-	  float delta_x = .1 - (temp / 100000);
+	  float delta_x = (temp / 100000);
 	  temp = (rand() % 20000);
-	  float delta_y = .1 - (temp / 100000);
+	  float delta_y = (temp / 100000) - .2;
 	  
 	  next.x += delta_x;
 	  next.y += delta_y;
@@ -86,4 +112,13 @@ float ** generate_set(point a, point b, point c, point *points){
 float get_distance(point a, point b){
       float distance = sqrt((pow((a.x - b.x),2) + pow((a.y - b.y),2)));
       return distance;
-}     
+}
+
+__global__ void trilateration(point *a, point *b, point *c, float ** dv, point * pts){
+
+	   printf("%d, %d",a->x,a->y);
+	   //cout << a.x << " " << a.y << endl;
+	   //cout	<< b.x << " " << b.y <<	endl;
+	   //cout	<< c.x << " " << c.y <<	endl;
+
+}
