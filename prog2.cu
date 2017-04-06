@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <cuda_runtime.h>
+#include <cuda.h>
 #include <algorithm>
 #include <ctime>
 #include <cmath>
@@ -23,7 +24,7 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 int main(int argc, char *argv[]){
     srand(time(NULL));
     cout << NUM << endl;
-
+    point *results =(point *) malloc((NUM/4) * (sizeof(point)));
     point *points =(point *) malloc((NUM/4) * (sizeof(point)));
 
     point a = {3.4,-2.4};
@@ -55,6 +56,12 @@ int main(int argc, char *argv[]){
 
     trilateration<<<1,1>>>(da,db,dc,dv,pts);
     
+    cudaMemcpy(results, pts, (NUM/4) * sizeof(point),cudaMemcpyDeviceToHost);
+
+    for(int i = 0; i < NUM/4; i++){
+	if(results[i].x != 0)
+		cout << results[i].x << ", " << results[i].y << "\n";
+    }
     return 0;    
 }
 
@@ -114,11 +121,32 @@ float get_distance(point a, point b){
       return distance;
 }
 
+float norm(point p){
+	return pow(pow(p.x,2) + pow(p.y,2), .5);
+}
+
 __global__ void trilateration(point *a, point *b, point *c, float ** dv, point * pts){
 
-	   printf("%d, %d",a->x,a->y);
-	   //cout << a.x << " " << a.y << endl;
-	   //cout	<< b.x << " " << b.y <<	endl;
-	   //cout	<< c.x << " " << c.y <<	endl;
+	   int i = threadIdx.x;
+	   pts[i].x = 32;
+	   pts[i].y = 123;
+	   /*float xa = a->x;
+	   float ya = a->y;
+	   float xb = b->x;
+	   float yb = b->y;
+	   float xc = c->x;
+	   float yc = c->y;
+	   float ra = dv[i][0];
+	   float rb = dv[i][1];
+	   float rc = dv[i][2];
+
+	   	float S = (pow(xc, 2) - pow(xb, 2) + pow(yc, 2) - pow(yb, 2) + pow(rb, 2) - pow(rc, 2)) / 2;
+		float T = (pow(xa, 2) - pow(xb, 2) + pow(ya, 2) - pow(yb, 2) + pow(ra, 2) - pow(rc, 2)) / 2;
+		float y = ((T * (xb - xc)) - (S * (xb - xa))) / (((ya, yb) * (xb - xc)) - ((yc - yb) * (xb - xa)));
+		float x = ((y * (ya)) - T) / (xb - xa);
+		point ret;
+		ret.x = x;
+		ret.y = y;
+		pts[i] = ret;*/
 
 }
