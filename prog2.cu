@@ -39,9 +39,9 @@ int main(int argc, char *argv[]){
     point * dc;
     point * pts;
 
-    cudaMalloc(&da, sizeof(point));
-    cudaMalloc(&db, sizeof(point));
-    cudaMalloc(&dc, sizeof(point));
+    /*cudaMalloc(&da, sizeof(point *));
+    cudaMalloc(&db, sizeof(point *));
+    cudaMalloc(&dc, sizeof(point *));
     cudaMalloc((void **)&pts, (NUM/4) * sizeof(point));
     cudaMalloc((void **)&dv, NUM*sizeof(float *));
 
@@ -52,15 +52,39 @@ int main(int argc, char *argv[]){
     cudaMemcpy(dv, distance_vector, NUM * sizeof(float*), cudaMemcpyHostToDevice);
     cudaMemcpy(da, &a, sizeof(point),cudaMemcpyHostToDevice);
     cudaMemcpy(db, &b, sizeof(point),cudaMemcpyHostToDevice);
-    cudaMemcpy(dc, &c, sizeof(point),cudaMemcpyHostToDevice);
+    cudaMemcpy(dc, &c, sizeof(point),cudaMemcpyHostToDevice);*/
+
+    cudaMallocManaged(&da, sizeof(point *));
+    cudaMallocManaged(&db, sizeof(point *));
+    cudaMallocManaged(&dc, sizeof(point *));
+    cudaMallocManaged(&pts, (NUM/4) * sizeof(point));
+    cudaMallocManaged(&dv, NUM * sizeof(float *));
+    /*for(int i = 0; i < NUM; i++){
+	cudaMallocManaged(&dv[i], 3*sizeof(float));
+    }
+
+    *da = a;
+    *db = b;
+    *dc = c;
+    for(int i = 0; i < NUM; i++){
+	for(int j = 0; j < 3; j++){
+		dv[i][j] = distance_vector[i][j];
+	}
+    }*/
 
     trilateration<<<1,1>>>(da,db,dc,dv,pts);
+    cudaDeviceSynchronize();
     
-    cudaMemcpy(results, pts, (NUM/4) * sizeof(point),cudaMemcpyDeviceToHost);
+    //cudaMemcpy(results, pts, (NUM/4) * sizeof(point),cudaMemcpyDeviceToHost);
 
-    for(int i = 0; i < NUM/4; i++){
+    /*for(int i = 0; i < NUM/4; i++){
 	if(results[i].x != 0)
 		cout << results[i].x << ", " << results[i].y << "\n";
+    }*/
+
+    for(int i = 0; i < NUM/4; i++){
+	if(pts[i].x == 32)
+		cout << pts[i].x << ", " << pts[i].y << "\n";
     }
     return 0;    
 }
