@@ -8,6 +8,8 @@
 #include <math.h>
 
 #define NUM (1<<12)
+#define U 2
+#define V 20
 
 using namespace std;
 
@@ -24,7 +26,7 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 int main(int argc, char *argv[]){
     srand(time(NULL));
     cout << NUM << endl;
-    point *results =(point *) malloc((NUM/4) * (sizeof(point)));
+    //point *results =(point *) malloc((NUM/4) * (sizeof(point)));
     point *points =(point *) malloc((NUM/4) * (sizeof(point)));
 
     point a = {3.4,-2.4};
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]){
     cudaMallocManaged(&dc, sizeof(point *));
     cudaMallocManaged(&pts, (NUM/4) * sizeof(point));
     cudaMallocManaged(&dv, NUM * sizeof(float *));
-    /*for(int i = 0; i < NUM; i++){
+    for(int i = 0; i < NUM; i++){
 	cudaMallocManaged(&dv[i], 3*sizeof(float));
     }
 
@@ -70,9 +72,9 @@ int main(int argc, char *argv[]){
 	for(int j = 0; j < 3; j++){
 		dv[i][j] = distance_vector[i][j];
 	}
-    }*/
+    }
 
-    trilateration<<<1,1>>>(da,db,dc,dv,pts);
+    trilateration<<<U,V>>>(da,db,dc,dv,pts);
     cudaDeviceSynchronize();
     
     //cudaMemcpy(results, pts, (NUM/4) * sizeof(point),cudaMemcpyDeviceToHost);
@@ -82,10 +84,41 @@ int main(int argc, char *argv[]){
 		cout << results[i].x << ", " << results[i].y << "\n";
     }*/
 
-    for(int i = 0; i < NUM/4; i++){
-	if(pts[i].x == 32)
+    for(int i = 0; i < 20; i++){
 		cout << pts[i].x << ", " << pts[i].y << "\n";
     }
+
+	/*
+	first points
+	0.170442, -0.212715
+	0.642852, -0.825177
+	1.1408, -1.19354
+	1.42159, -1.6076
+	1.62658, -2.18829
+	1.77826, -2.66518
+	2.17155, -2.97643
+	2.65642, -3.23502
+	3.06065, -3.62799
+	3.42531, -4.1356
+	3.96662, -4.42709
+	4.41263, -4.69845
+	4.93671, -4.96385
+	5.46347, -5.28732
+	6.06384, -5.70538
+	6.48004, -6.27095
+	7.05871, -6.8165
+	7.63242, -7.21735
+	8.05061, -7.52002
+	8.4322, -7.82146
+	8.73583, -8.10203
+	9.03263, -8.45821
+	9.40358, -8.86348
+	9.6679, -9.13161
+ 
+
+	*/
+
+
     return 0;    
 }
 
@@ -111,7 +144,7 @@ float ** generate_set(point a, point b, point c, point *points){
 	  dist[i][2] = get_distance(c,next);
 
 
-	  cout << dist[i][0] << "," << dist[i][1] << "," << dist[i][2] << endl;
+	  //cout << dist[i][0] << "," << dist[i][1] << "," << dist[i][2] << endl;
 	  
 	  if(i%4 == 0 && i != 0){
 	  	point t;
@@ -120,6 +153,7 @@ float ** generate_set(point a, point b, point c, point *points){
 		points[(i/4)-1] = t;
 		x_ave = 0;
 		y_ave = 0;
+		//if(i < 100) cout << t.x << ", " << t.y << endl;
 	  }	  
 
 	  x_ave	+= next.x;
@@ -151,18 +185,21 @@ float norm(point p){
 
 __global__ void trilateration(point *a, point *b, point *c, float ** dv, point * pts){
 
-	   int i = threadIdx.x;
-	   pts[i].x = 32;
-	   pts[i].y = 123;
-	   /*float xa = a->x;
+	   int i = blockIdx.x * blockDim.x + threadIdx.x;
+		   
+	   int j;
+	   for(j =0; j < (NUM/(U*V));j++){
+	   /*pts[i].x = 32;
+	   pts[i].y = 123;*/
+	   float xa = a->x;
 	   float ya = a->y;
 	   float xb = b->x;
 	   float yb = b->y;
 	   float xc = c->x;
 	   float yc = c->y;
-	   float ra = dv[i][0];
-	   float rb = dv[i][1];
-	   float rc = dv[i][2];
+	   float ra = dv[i+ j*U*V][0];
+	   float rb = dv[i+ j*U*V][1];
+	   float rc = dv[i+ j*U*V][2];
 
 	   	float S = (pow(xc, 2) - pow(xb, 2) + pow(yc, 2) - pow(yb, 2) + pow(rb, 2) - pow(rc, 2)) / 2;
 		float T = (pow(xa, 2) - pow(xb, 2) + pow(ya, 2) - pow(yb, 2) + pow(ra, 2) - pow(rc, 2)) / 2;
@@ -171,6 +208,7 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 		point ret;
 		ret.x = x;
 		ret.y = y;
-		pts[i] = ret;*/
-
+		pts[i + j*U*V] = ret;
+		syncthreads();
+	}
 }
