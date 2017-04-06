@@ -9,7 +9,7 @@
 
 #define NUM (1<<12)
 #define U 2
-#define V 20
+#define V 16
 
 using namespace std;
 
@@ -187,28 +187,34 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 
 	   int i = blockIdx.x * blockDim.x + threadIdx.x;
 		   
-	   int j;
-	   for(j =0; j < (NUM/(U*V));j++){
-	   /*pts[i].x = 32;
-	   pts[i].y = 123;*/
-	   float xa = a->x;
-	   float ya = a->y;
-	   float xb = b->x;
-	   float yb = b->y;
-	   float xc = c->x;
-	   float yc = c->y;
-	   float ra = dv[i+ j*U*V][0];
-	   float rb = dv[i+ j*U*V][1];
-	   float rc = dv[i+ j*U*V][2];
+	   int j,k;
+	   for(j =0; j < ((NUM/4)/(U*V));j++){
+	   	 float ave_y = 0, ave_x = 0;
+	   	 for(k = 0; k < 4; k++){
+	   	        float xa = a->x;
+		 	float ya = a->y;
+	   	 	float xb = b->x;
+	   	 	float yb = b->y;
+	   	 	float xc = c->x;
+	   	 	float yc = c->y;
+	   	 	float ra = dv[i+ j*U*V + i][0];
+	   	 	float rb = dv[i+ j*U*V][1];
+	   	 	float rc = dv[i+ j*U*V][2];
 
-	   	float S = (pow(xc, 2) - pow(xb, 2) + pow(yc, 2) - pow(yb, 2) + pow(rb, 2) - pow(rc, 2)) / 2;
-		float T = (pow(xa, 2) - pow(xb, 2) + pow(ya, 2) - pow(yb, 2) + pow(ra, 2) - pow(rc, 2)) / 2;
-		float y = ((T * (xb - xc)) - (S * (xb - xa))) / (((ya, yb) * (xb - xc)) - ((yc - yb) * (xb - xa)));
-		float x = ((y * (ya)) - T) / (xb - xa);
-		point ret;
-		ret.x = x;
-		ret.y = y;
-		pts[i + j*U*V] = ret;
-		syncthreads();
+			float A = -2*xa + (2*xb);
+	   		float B = -2*ya + (2*yb);
+	   		float C = pow(ra, 2) - pow(rb,2) - pow(xa, 2) + pow(xb, 2) - pow(ya, 2) + pow(yb, 2);
+	   		float D = -2*xb + (2*xc);
+   	   		float E = -2*yb + (2*yc);
+	   		float F = pow(rb, 2) - pow(rc, 2) - pow(xb, 2) + pow(xc, 2) - pow(yb, 2) + pow(yc, 2);
+
+			ave_x += (C*D - F*A) / (B*D - E*A);
+			ave_y += (A*E - D*B) / (C*E - F*B);
+		}
+	   	point ret;
+	   	ret.x = ave_x/4;
+	   	ret.y = ave_y/4;
+	   	pts[i + j*U*V] = ret;
+	   	syncthreads();
 	}
 }
