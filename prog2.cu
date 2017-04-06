@@ -197,9 +197,9 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 	   	 	float yb = b->y;
 	   	 	float xc = c->x;
 	   	 	float yc = c->y;
-	   	 	float ra = dv[i+ j*U*V + i][0];
-	   	 	float rb = dv[i+ j*U*V][1];
-	   	 	float rc = dv[i+ j*U*V][2];
+	   	 	float ra = dv[i*(U*V)+ j*(U*V)(U*V) + k][0];
+	   	 	float rb = dv[i*(U*V)+ j*(U*V)(U*V) + k][1];
+	   	 	float rc = dv[i*(U*V)+ j*(U*V)(U*V) + k][2];
 
 			float A = -2*xa + (2*xb);
 	   		float B = -2*ya + (2*yb);
