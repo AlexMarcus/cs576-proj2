@@ -41,7 +41,8 @@ int main(int argc, char *argv[]){
     point * dc;
     point * pts;
 
-    /*cudaMalloc(&da, sizeof(point *));
+    /*
+    cudaMalloc(&da, sizeof(point *));
     cudaMalloc(&db, sizeof(point *));
     cudaMalloc(&dc, sizeof(point *));
     cudaMalloc((void **)&pts, (NUM/4) * sizeof(point));
@@ -54,7 +55,8 @@ int main(int argc, char *argv[]){
     cudaMemcpy(dv, distance_vector, NUM * sizeof(float*), cudaMemcpyHostToDevice);
     cudaMemcpy(da, &a, sizeof(point),cudaMemcpyHostToDevice);
     cudaMemcpy(db, &b, sizeof(point),cudaMemcpyHostToDevice);
-    cudaMemcpy(dc, &c, sizeof(point),cudaMemcpyHostToDevice);*/
+    cudaMemcpy(dc, &c, sizeof(point),cudaMemcpyHostToDevice);
+    */
 
     cudaMallocManaged(&da, sizeof(point *));
     cudaMallocManaged(&db, sizeof(point *));
@@ -118,6 +120,14 @@ int main(int argc, char *argv[]){
 
 	*/
 
+    free(points);
+    cudaFree(da);
+    cudaFree(db);
+    cudaFree(dc);
+    cudaFree(points);
+    for(int i = 0; i < NUM; i++)
+            cudaFree(dv[i]);
+    cudaFree(dv);
 
     return 0;    
 }
@@ -197,9 +207,9 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 	   	 	float yb = b->y;
 	   	 	float xc = c->x;
 	   	 	float yc = c->y;
-	   	 	float ra = dv[i*(U*V)+ j*(U*V)(U*V) + k][0];
-	   	 	float rb = dv[i*(U*V)+ j*(U*V)(U*V) + k][1];
-	   	 	float rc = dv[i*(U*V)+ j*(U*V)(U*V) + k][2];
+	   	 	float ra = dv[i*(U*V)+ j*(U*V)*(U*V) + k][0];
+	   	 	float rb = dv[i*(U*V)+ j*(U*V)*(U*V) + k][1];
+	   	 	float rc = dv[i*(U*V)+ j*(U*V)*(U*V) + k][2];
 
 			float A = -2*xa + (2*xb);
 	   		float B = -2*ya + (2*yb);
