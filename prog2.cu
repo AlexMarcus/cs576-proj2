@@ -17,7 +17,7 @@ typedef struct{
         float x,y;
 } point;
 
-float ** generate_set(point a, point b, point c, point *points);
+float ** generate_set(point a, point b, point c, point *points,point *all_points);
 float get_distance(point a, point b);
 __global__ void trilateration(point *a, point *b, point *c, float ** dv, point * pts);
 
@@ -28,12 +28,13 @@ int main(int argc, char *argv[]){
     cout << NUM << endl;
     //point *results =(point *) malloc((NUM/4) * (sizeof(point)));
     point *points =(point *) malloc((NUM/4) * (sizeof(point)));
+    point *all_points =(point *) malloc((NUM) * (sizeof(point)));
 
     point a = {3.4,-2.4};
     point b = {5.6,1.23};
     point c = {-3.8,5.4};
     
-    float ** distance_vector = generate_set(a,b,c,points);
+    float ** distance_vector = generate_set(a,b,c,points, all_points);
 
     float ** dv;
     point * da;
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]){
     cudaMallocManaged(&da, sizeof(point *));
     cudaMallocManaged(&db, sizeof(point *));
     cudaMallocManaged(&dc, sizeof(point *));
-    cudaMallocManaged(&pts, (NUM/4) * sizeof(point));
+    cudaMallocManaged(&pts, (NUM) * sizeof(point));
     cudaMallocManaged(&dv, NUM * sizeof(float *));
     for(int i = 0; i < NUM; i++){
 	cudaMallocManaged(&dv[i], 3*sizeof(float));
@@ -76,6 +77,10 @@ int main(int argc, char *argv[]){
 	}
     }
 
+    point guard = {3.4, -2.4};
+    point center = {1,1};
+    cout << "HERE " << get_distance(guard, center) << endl;
+
     trilateration<<<U,V>>>(da,db,dc,dv,pts);
     cudaDeviceSynchronize();
     
@@ -87,7 +92,7 @@ int main(int argc, char *argv[]){
     }*/
 
     for(int i = 0; i < 20; i++){
-		cout << pts[i].x << ", " << pts[i].y << "\n";
+		cout << pts[i].x << ", " << pts[i].y << " | Actual point: " << all_points[i].x << ", " << all_points[i].y << "\n";
     }
 
 	/*
@@ -132,7 +137,7 @@ int main(int argc, char *argv[]){
     return 0;    
 }
 
-float ** generate_set(point a, point b, point c, point *points){
+float ** generate_set(point a, point b, point c, point *points, point *all_points){
 
     float ** dist = (float **) malloc(NUM * sizeof(float *)); 
     int i,j;
@@ -152,7 +157,7 @@ float ** generate_set(point a, point b, point c, point *points){
     	  dist[i][0] = get_distance(a,next);
 	  dist[i][1] = get_distance(b,next);
 	  dist[i][2] = get_distance(c,next);
-
+	  all_points[i] = next;
 
 	  //cout << dist[i][0] << "," << dist[i][1] << "," << dist[i][2] << endl;
 	  
@@ -197,34 +202,29 @@ __global__ void trilateration(point *a, point *b, point *c, float ** dv, point *
 
 	   int i = blockIdx.x * blockDim.x + threadIdx.x;
 		   
-	   int j,k;
-	   for(j =0; j < ((NUM/4)/(U*V));j++){
+	   int j;
+	   for(j =0; j < ((NUM)/(U*V*4));j++){
 	   	 float ave_y = 0, ave_x = 0;
-	   	 for(k = 0; k < 4; k++){
 	   	        float xa = a->x;
 		 	float ya = a->y;
 	   	 	float xb = b->x;
 	   	 	float yb = b->y;
 	   	 	float xc = c->x;
 	   	 	float yc = c->y;
-	   	 	float ra = dv[i*(U*V)+ j*(U*V)*(U*V) + k][0];
-	   	 	float rb = dv[i*(U*V)+ j*(U*V)*(U*V) + k][1];
-	   	 	float rc = dv[i*(U*V)+ j*(U*V)*(U*V) + k][2];
+	   	 	float ra = dv[i+ j*(U*V)][0];
+	   	 	float rb = dv[i+ j*(U*V)][1];
+	   	 	float rc = dv[i+ j*(U*V)][2];
 
-			float A = -2*xa + (2*xb);
-	   		float B = -2*ya + (2*yb);
-	   		float C = pow(ra, 2) - pow(rb,2) - pow(xa, 2) + pow(xb, 2) - pow(ya, 2) + pow(yb, 2);
-	   		float D = -2*xb + (2*xc);
-   	   		float E = -2*yb + (2*yc);
-	   		float F = pow(rb, 2) - pow(rc, 2) - pow(xb, 2) + pow(xc, 2) - pow(yb, 2) + pow(yc, 2);
-
-			ave_x += (C*D - F*A) / (B*D - E*A);
-			ave_y += (A*E - D*B) / (C*E - F*B);
-		}
-	   	point ret;
-	   	ret.x = ave_x/4;
-	   	ret.y = ave_y/4;
-	   	pts[i + j*U*V] = ret;
-	   	syncthreads();
+			float numerator = ((xb - xa) * (xc * xc + yc * yc - rc*rc) +
+				(xa - xc) * (xb * xb + yb * yb - rb * rb) +
+				(xc - xb) * (xa * xa + ya * ya - ra * ra));
+	   		float denominator = (2 * (yc *(xb - xa) + yb * (xa - xc) + ya * (xc - xb)));
+	   		float y = numerator/denominator;
+	   		float x = (rb * rb + xa * xa + ya * ya - ra * ra - xb * xb - yb * yb - 2*(ya - yb) * y) / (2*(xa -xb));
+			point ret;
+			ret.x = x;
+			ret.y = y;
+			pts[i + j *U*V] = ret;
+	   		syncthreads();
 	}
 }
